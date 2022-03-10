@@ -6,33 +6,47 @@
 #define LTL_LPAR ((void*)0x01)
 #define LTL_RPAR ((void*)0x02)
 
-ltsmin_expr_t
-ltsmin_expr_lookup(ltsmin_expr_t e, char *text, ltsmin_expr_list_t **le_list)
+char* remove_spaces(char* source)
 {
-    // lookup expression
-    ltsmin_expr_list_t **pp_le_list = le_list;
-    while(*pp_le_list != NULL) {
-        if (e) {
-            // compare on expression
-            if ((*pp_le_list)->expr->hash == e->hash) {
-                if (LTSminExprEq((*pp_le_list)->expr, e)) {
-                    return (*pp_le_list)->expr;
-                }
-            }
-        } else {
-            // compare on text
-            if (strcmp((*pp_le_list)->text, text) == 0)
-                return (*pp_le_list)->expr;
-        }
-        pp_le_list = (ltsmin_expr_list_t**)&((*pp_le_list)->next);
+  char *target = malloc(strlen(source)+1);
+
+  while(*source++ && *target)
+    {
+      if (!isspace(*source))
+	*target++ = *source;
     }
-    // alloc room for this predicate expression
-    *pp_le_list = (ltsmin_expr_list_t*) RTmalloc(sizeof(ltsmin_expr_list_t));
-    (*pp_le_list)->text = strdup(text);
-    (*pp_le_list)->expr = e;
-    Debug ("LTL Symbol table: record expression %p as '%s'", e, text);
-    (*pp_le_list)->next = NULL;
-    return e;
+  return target;
+}
+
+ltsmin_expr_t
+ltsmin_expr_lookup(ltsmin_expr_t e, char *t, ltsmin_expr_list_t **le_list)
+{
+  char* text = remove_spaces(t);
+
+  // lookup expression
+  ltsmin_expr_list_t **pp_le_list = le_list;
+  while(*pp_le_list != NULL) {
+    if (e) {
+      // compare on expression
+      if ((*pp_le_list)->expr->hash == e->hash) {
+	if (LTSminExprEq((*pp_le_list)->expr, e)) {
+	  return (*pp_le_list)->expr;
+	}
+      }
+    } else {
+      // compare on text
+      if (strcmp((*pp_le_list)->text, text) == 0)
+	return (*pp_le_list)->expr;
+    }
+    pp_le_list = (ltsmin_expr_list_t**)&((*pp_le_list)->next);
+  }
+  // alloc room for this predicate expression
+  *pp_le_list = (ltsmin_expr_list_t*) RTmalloc(sizeof(ltsmin_expr_list_t));
+  (*pp_le_list)->text = strdup(text);
+  (*pp_le_list)->expr = e;
+  Debug ("LTL Symbol table: record expression %p as '%s'", e, text);
+  (*pp_le_list)->next = NULL;
+  return e;
 }
 
 void

@@ -106,6 +106,17 @@ read_formula (const char *file)
     }
 }
 
+stream_t
+read_string_formula (const char *formula)
+{
+  FILE *fp = tmpfile();
+  fprintf(fp, "%s", formula);
+  fclose(fp);
+  return read_formula("/tmp/test.txt");
+}
+
+
+
 static void
 fill_env (ltsmin_parse_env_t env, lts_type_t ltstype)
 {
@@ -294,6 +305,30 @@ ltl_parse_file(const char *file, ltsmin_parse_env_t env, lts_type_t ltstype)
 
     return env->expr;
 }
+
+
+
+ltsmin_expr_t
+ltl_parse_string(const char *formula, ltsmin_parse_env_t env, lts_type_t ltstype)
+{
+    stream_t stream = read_string_formula (formula);
+
+    fill_env (env, ltstype);
+
+    create_ltl_env(env);
+
+    ltsmin_parse_stream(TOKEN_EXPR,env,stream);
+
+    data_format_t df = check_type_format_LTL(env->expr, env, ltstype);
+
+    get_data_format_unary(UNARY_BOOL_OPS, env->expr, env, df);
+
+    env->expr = ltl_tree_walker(env->expr);
+
+    return env->expr;
+}
+
+
 
 static void
 create_ctl_env(ltsmin_parse_env_t env)

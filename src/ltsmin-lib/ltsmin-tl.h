@@ -77,6 +77,7 @@ typedef enum {
 } LTL;
 
 extern ltsmin_expr_t ltl_parse_file(const char *,ltsmin_parse_env_t,lts_type_t);
+extern ltsmin_expr_t ltl_parse_string(const char *,ltsmin_parse_env_t,lts_type_t);
 
 /* Computation Tree logic */
 
@@ -163,6 +164,7 @@ extern const char  *CTL_NAME(CTL ctl);
 extern const char  *MU_NAME(MU mu);
 
 extern stream_t read_formula(const char *file);
+extern stream_t read_string_formula(const char *file);
 
 extern ltsmin_expr_t mu_parse_file(const char *,ltsmin_parse_env_t,lts_type_t);
 

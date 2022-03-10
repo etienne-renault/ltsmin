@@ -92,7 +92,7 @@ ltl_popt (poptContext con, enum poptCallbackReason reason,
 struct poptOption ltl_options[] = {
     {NULL, 0, POPT_ARG_CALLBACK | POPT_CBFLAG_POST | POPT_CBFLAG_SKIPOPTION, (void *)ltl_popt, 0, NULL, NULL},
     {"ltl", 0, POPT_ARG_STRING, &ltl_file, 0, "LTL formula or file with LTL formula",
-     "<ltl-file>.ltl|<ltl formula>"},
+     "<ltl-file>.ltl|<ltl-file>.hoa|<ltl formula>"},
     {"ltl-semantics", 0, POPT_ARG_STRING, &ltl_semantics_name, 0,
      "LTL semantics", "<spin|textbook|ltsmin> (default: \"auto\")"},
     {"buchi-type", 0, POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT, &buchi_type, 0,
@@ -572,54 +572,76 @@ init_ltsmin_buchi(model_t model, const char *ltl_file)
     if (NULL == shared_ba && cas(&grab_ba, 0, 1)) {
         Print(info, "LTL layer: formula: %s", ltl_file);
         ltsmin_parse_env_t env = LTSminParseEnvCreate();
-        ltsmin_expr_t ltl = ltl_parse_file (ltl_file, env, GBgetLTStype(model));
-        struct LTL_info LTL_info = {0, 0};
-        check_LTL(ltl, env, &LTL_info);
-        if (PINS_LTL == PINS_LTL_AUTO) {
-            if (LTL_info.has_EVAR) {
+
+	bool is_hoa = false;
+	const char *dot = strrchr(ltl_file, '.');
+	if (dot && *(++dot) == 'h' && *(++dot) == 'o' && *(++dot) == 'a')
+	  {
+	    is_hoa = true;
+
+	    PINS_LTL = PINS_LTL_SPIN;
+	    PINS_BUCHI_TYPE = PINS_BUCHI_TYPE_SPOTBA;
+
+	    ltsmin_file2spot(ltl_file,  env, GBgetLTStype(model));
+
+	    ba = ltsmin_hoa_buchi(env);
+	  }
+
+	if (!is_hoa)
+	  {
+	    ltsmin_expr_t ltl = ltl_parse_file (ltl_file, env, GBgetLTStype(model));
+
+	    struct LTL_info LTL_info = {0, 0};
+	    check_LTL(ltl, env, &LTL_info);
+
+
+
+	    if (PINS_LTL == PINS_LTL_AUTO) {
+	      if (LTL_info.has_EVAR) {
                 PINS_LTL = PINS_LTL_LTSMIN;
                 Print(info, "Using LTSmin LTL semantics");
-            } else {
+	      } else {
                 PINS_LTL = PINS_LTL_SPIN;
                 Print(info, "Using Spin LTL semantics");
-            }
-        }
-        if (LTL_info.has_X && PINS_POR) {
-            const char* ex = LTSminPrintExpr(ltl, env);
-            Abort("The neXt operator is not allowed in "
+	      }
+	    }
+	    if (LTL_info.has_X && PINS_POR) {
+	      const char* ex = LTSminPrintExpr(ltl, env);
+	      Abort("The neXt operator is not allowed in "
                     "combination with --por: %s", ex);
-        } else if (LTL_info.has_EVAR) {
-            if (PINS_POR) {
+	    } else if (LTL_info.has_EVAR) {
+	      if (PINS_POR) {
                 const char* ex = LTSminPrintExpr(ltl, env);
                 Abort("Edge-based LTL is incompatible with "
-                        "Partial Order Reduction (--por): %s", ex);
-            } else if (PINS_LTL == PINS_LTL_SPIN) {
+		      "Partial Order Reduction (--por): %s", ex);
+	      } else if (PINS_LTL == PINS_LTL_SPIN) {
                 const char* ex = LTSminPrintExpr(ltl, env);
                 Abort("Edge-based LTL is incompatible with "
-                        "Spin semantics (--ltl-semantics=spin): %s", ex);
-            } else if (PINS_LTL == PINS_LTL_TEXTBOOK) {
+		      "Spin semantics (--ltl-semantics=spin): %s", ex);
+	      } else if (PINS_LTL == PINS_LTL_TEXTBOOK) {
                 const char* ex = LTSminPrintExpr(ltl, env);
                 Abort("Edge-based LTL is incompatible with "
-                        "textbook semantics (--ltl-semantics=textbook): %s", ex);
-            }
-        }
+		      "textbook semantics (--ltl-semantics=textbook): %s", ex);
+	      }
+	    }
 
-        ltsmin_expr_t notltl = LTSminExpr(UNARY_OP, LTL_NOT, 0, ltl, NULL);
+	    ltsmin_expr_t notltl = LTSminExpr(UNARY_OP, LTL_NOT, 0, ltl, NULL);
 
 #ifdef HAVE_SPOT
-        if (PINS_BUCHI_TYPE == PINS_BUCHI_TYPE_TGBA ||
-            PINS_BUCHI_TYPE == PINS_BUCHI_TYPE_SPOTBA) {
-            ltsmin_ltl2spot(notltl, PINS_BUCHI_TYPE == PINS_BUCHI_TYPE_TGBA, env);
-            ba = ltsmin_hoa_buchi(env);
-        } else {
+	    if (PINS_BUCHI_TYPE == PINS_BUCHI_TYPE_TGBA ||
+		PINS_BUCHI_TYPE == PINS_BUCHI_TYPE_SPOTBA) {
+	      ltsmin_ltl2spot(notltl, PINS_BUCHI_TYPE == PINS_BUCHI_TYPE_TGBA, env);
+	      ba = ltsmin_hoa_buchi(env);
+	    } else {
 #endif
-            HREassert(PINS_BUCHI_TYPE == PINS_BUCHI_TYPE_BA, 
-                "Buchi type %s is not possible without Spot", buchi_type);
-            ltsmin_ltl2ba(notltl);
-            ba = ltsmin_buchi();
+	      HREassert(PINS_BUCHI_TYPE == PINS_BUCHI_TYPE_BA,
+			"Buchi type %s is not possible without Spot", buchi_type);
+	      ltsmin_ltl2ba(notltl);
+	      ba = ltsmin_buchi();
 #ifdef HAVE_SPOT
-        }
+	    }
 #endif
+	  }
 
         if (ba == NULL) {
             Print(info, "Empty buchi automaton.");
