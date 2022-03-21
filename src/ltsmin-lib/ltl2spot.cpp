@@ -334,12 +334,16 @@ create_ltsmin_buchi(spot::twa_graph_ptr& aut, ltsmin_parse_env_t env)
 
 void ltsmin_file2spot(char* file, ltsmin_parse_env_t env, lts_type_t model)
 {
-  spot::parsed_aut_ptr pa = parse_aut(file, spot::make_bdd_dict());
+  spot::bdd_dict_ptr dict = spot::make_bdd_dict();
+  spot::parsed_aut_ptr pa = parse_aut(file, dict);
   pa->format_errors(std::cerr);
   spot_automaton = pa->aut;
 
   // FIXME if is_maybe
   isTGBA = ! spot_automaton->prop_state_acc().is_true();
+
+  // initialize env
+  init_ltl_env(env, model);
 
   for (spot::formula ap: spot_automaton->ap())
     {
