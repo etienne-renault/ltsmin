@@ -315,10 +315,6 @@ ltl_parse_string(const char *formula, ltsmin_parse_env_t env, lts_type_t ltstype
 {
     stream_t stream = read_string_formula (formula);
 
-    fill_env (env, ltstype);
-
-    create_ltl_env(env);
-
     ltsmin_parse_stream(TOKEN_EXPR,env,stream);
 
     data_format_t df = check_type_format_LTL(env->expr, env, ltstype);
@@ -330,7 +326,12 @@ ltl_parse_string(const char *formula, ltsmin_parse_env_t env, lts_type_t ltstype
     return env->expr;
 }
 
-
+void
+init_ltl_env(ltsmin_parse_env_t env, lts_type_t ltstype)
+{
+	fill_env(env, ltstype);
+	create_ltl_env(env);
+}
 
 static void
 create_ctl_env(ltsmin_parse_env_t env)
