@@ -109,10 +109,12 @@ read_formula (const char *file)
 stream_t
 read_string_formula (const char *formula)
 {
-  FILE *fp = tmpfile();
+  char filename[] = "/tmp/hoaXXXXXX";
+  mkstemp(filename);
+  FILE *fp = fopen(filename, "rw+" ); 
   fprintf(fp, "%s", formula);
   fclose(fp);
-  return read_formula("/tmp/test.txt");
+  return read_formula(filename);
 }
 
 
